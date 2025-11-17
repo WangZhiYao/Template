@@ -23,8 +23,8 @@ import kotlinx.coroutines.launch
  * viewModel.observe(viewLifecycleOwner, state = ::state, sideEffect = ::sideEffect)
  * ```
  *
- *  * @author WangZhiYao
- *  * @since 2025/11/16
+ * @author WangZhiYao
+ * @since 2025/11/16
  */
 fun <STATE : Any, SIDE_EFFECT : Any> MVIContainer<STATE, SIDE_EFFECT>.observe(
     lifecycleOwner: LifecycleOwner,
