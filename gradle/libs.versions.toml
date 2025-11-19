@@ -30,7 +30,7 @@ material = "1.13.0"
 
 # Networking
 retrofit = "3.0.0"
-okhttp = "5.3.1"
+okhttp = "5.3.2"
 
 # Async & Serialization
 kotlinx-coroutines = "1.10.2"
