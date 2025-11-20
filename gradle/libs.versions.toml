@@ -23,7 +23,7 @@ lifecycle = "2.10.0"
 navigation = "2.9.6"
 room = "2.8.4"
 paging = "3.3.6"
-datastore = "1.1.7"
+datastore = "1.2.0"
 
 # UI
 material = "1.13.0"
