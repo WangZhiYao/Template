@@ -22,7 +22,7 @@ paging = "3.3.6"
 datastore = "1.1.7"
 
 # Compose
-compose-bom = "2025.11.00"
+compose-bom = "2025.11.01"
 activity-compose = "1.11.0"
 hilt-navigation = "1.3.0"
 
