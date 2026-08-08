@@ -1,8 +1,8 @@
 [versions]
 # Base
-android = "8.13.2"
-kotlin = "2.3.0"
-ksp = "2.3.4"
+android = "9.3.1"
+kotlin = "2.4.10"
+ksp = "2.3.11"
 
 # Testing
 junit = "4.13.2"
@@ -11,30 +11,30 @@ espresso = "3.7.0"
 leakcanary = "2.14"
 
 # DI
-hilt = "2.57.2"
+hilt = "2.60.1"
 
 # AndroidX
-androidx-core = "1.17.0"
+androidx-core = "1.19.0"
 appcompat = "1.7.1"
-constraintlayout = "2.2.1"
-activity = "1.12.2"
+constraintlayout = "2.2.2"
+activity = "1.13.0"
 fragment = "1.8.9"
-lifecycle = "2.10.0"
-navigation = "2.9.6"
+lifecycle = "2.11.0"
+navigation = "2.9.8"
 room = "2.8.4"
-paging = "3.3.6"
-datastore = "1.2.0"
+paging = "3.5.0"
+datastore = "1.2.1"
 
 # UI
-material = "1.13.0"
+material = "1.14.0"
 
 # Networking
 retrofit = "3.0.0"
-okhttp = "5.3.2"
+okhttp = "5.4.0"
 
 # Async & Serialization
-kotlinx-coroutines = "1.10.2"
-kotlinx-serialization = "1.9.0"
+kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.11.0"
 
 [libraries]
 # AndroidX - Core & UI
@@ -82,7 +82,6 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android" }
 android-library = { id = "com.android.library", version.ref = "android" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
