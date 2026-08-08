@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.room)
@@ -11,24 +10,13 @@ plugins {
 android {
     namespace = "com.example.template.core.database.impl"
     compileSdk {
-        version = release(36)
+        version = release(37)
     }
 
     defaultConfig {
         minSdk = 28
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
     }
 
     compileOptions {
