@@ -16,7 +16,7 @@ hilt = "2.57.2"
 # AndroidX
 androidx-core = "1.17.0"
 lifecycle = "2.10.0"
-navigation = "2.9.6"
+navigation = "2.9.8"
 room = "2.8.4"
 paging = "3.3.6"
 datastore = "1.2.0"
