@@ -28,7 +28,7 @@ hilt-navigation = "1.4.0"
 
 # Networking
 retrofit = "3.0.0"
-okhttp = "5.4.0"
+okhttp = "5.5.0"
 
 # Async & Serialization
 kotlinx-coroutines = "1.11.0"
