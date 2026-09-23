@@ -14,7 +14,7 @@ leakcanary = "2.14"
 hilt = "2.60.1"
 
 # AndroidX
-androidx-core = "1.19.0"
+androidx-core = "1.19.1"
 appcompat = "1.8.0"
 constraintlayout = "2.2.2"
 activity = "1.13.0"
