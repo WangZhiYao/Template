@@ -1,107 +1,306 @@
 # Android Application Template
 
-This project is an opinionated Android application template designed to provide a robust and scalable foundation for modern application development. The template enforces a strict multi-module, layered architecture and integrates a comprehensive suite of industry-proven libraries and design patterns to promote code quality, maintainability, and team collaboration efficiency.
+This project is an opinionated Android application template designed to provide a robust and scalable foundation for modern application development. The template enforces a strict multi-module, unidirectional architecture, and centralises build configuration in Gradle convention plugins so that adding a new module stays a matter of a few lines rather than a copy-pasted block of boilerplate.
 
 ## 1. Tech Stack & Core Principles
 
-This template is built upon the following core technologies and design principles:
-
-* **Language**: [Kotlin](https://kotlinlang.org/) (including Kotlin DSL for Gradle).
-* **Architectural Pattern**: MVI (Model-View-Intent) combined with Clean Architecture, implementing a strict unidirectional data flow and layered design.
-* **Dependency Injection**: [Hilt](https://developer.android.com/training/dependency-injection/hilt-android) is used to manage the dependency graph throughout the application.
-* **Asynchronicity**: [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) and [Flow](https://developer.android.com/kotlin/flow) are used to manage asynchronous operations and reactive data streams.
-* **Networking**: [Retrofit](https://square.github.io/retrofit/) and [OkHttp](https://square.github.io/okhttp/) are responsible for network communication, with a logging interceptor configured.
-* **Data Persistence**:
-    * [Room](https://developer.android.com/training/data-storage/room): For local persistence of structured data.
-    * [DataStore](https://developer.android.com/topic/libraries/architecture/datastore): For storing key-value pairs.
-* **UI (View System)**: Built upon Android Views and ViewBinding, without Jetpack Compose.
-* **Build System**: Gradle, utilizing Version Catalogs (`libs.versions.toml`) for centralized dependency version management.
+- **Language**: [Kotlin](https://kotlinlang.org/) with Kotlin DSL for Gradle. Kotlin compilation comes from **AGP 9's built-in Kotlin support**, so modules apply only the Android plugin and no `org.jetbrains.kotlin.android` plugin; `jvmTarget` follows `compileOptions` (Java 21).
+- **Build System**: Gradle 9.8.0 + AGP 9.4.1, using Version Catalogs (`gradle/libs.versions.toml`) for dependency versions and `build-logic` convention plugins for shared configuration.
+- **Toolchain**: JDK 21, `compileSdk` / `targetSdk` 37, `minSdk` 28 — all declared once in `AppConfig`.
+- **Architectural Pattern**: MVI (Model-View-Intent) combined with Clean Architecture, implementing a strict unidirectional data flow.
+- **Dependency Injection**: [Hilt](https://developer.android.com/training/dependency-injection/hilt-android) (via KSP) manages the dependency graph.
+- **Asynchronicity**: [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) and [Flow](https://developer.android.com/kotlin/flow) for asynchronous work and reactive data streams.
+- **Networking**: [Retrofit](https://square.github.io/retrofit/) + [OkHttp](https://square.github.io/okhttp/) with a logging interceptor and the kotlinx.serialization converter.
+- **Data Persistence**:
+    - [Room](https://developer.android.com/training/data-storage/room): structured local data (Kotlin codegen via KSP).
+    - [DataStore](https://developer.android.com/topic/libraries/architecture/datastore): key-value storage.
+    - [Paging 3](https://developer.android.com/topic/libraries/architecture/paging/v3-overview): paged data sources.
+- **UI (View System)**: Android Views and ViewBinding, without Jetpack Compose.
+- **Testing**: JUnit 4, `kotlinx-coroutines-test`, AndroidX Test / Espresso, and LeakCanary (debug builds only).
+- **Gradle performance**: parallel builds, build cache, configuration cache (with `problems=fail`), and isolated projects are all enabled.
 
 ## 2. Architectural Design
 
 ### 2.1 Design Philosophy
 
-The core of this architecture is **Separation of Concerns (SoC)** and the **Dependency Inversion Principle (DIP)**, which strictly partition the application into three layers: **UI Layer**, **Domain Layer**, and **Data Layer**.
+The architecture rests on three ideas:
 
-* **The Dependency Rule**: Dependencies must be unidirectional, pointing inwards: `UI Layer` -> `Domain Layer` <- `Data Layer`. **The UI and Data layers must never depend on each other directly.**
-* **Benefits of Layering**: Each layer has a clear responsibility, leading to highly decoupled, testable, and maintainable code. Any changes to data sources (e.g., switching from a database to a network source) are confined to the Data Layer, without affecting the UI Layer.
+1. **Unidirectional dependencies.** Dependencies point one way only: `:app` -> `:feature:*` -> `:shared:*` / `:core:*`. Nothing lower in that chain may reference something higher.
+2. **A feature is a vertical slice.** A feature module owns everything needed to ship its screens: Fragments, MVI ViewModels, state and side-effect types, and its own data access. It pulls in a `:core:*` module only when it actually needs that capability.
+3. **Shared code is split by kind.** Reusable _presentation_ code lives in `:shared:*`; reusable _infrastructure_ lives in `:core:*`. Neither knows anything about a specific feature.
 
-### 2.2 Module Details
+The benefit is that changes stay local: a data source can be swapped inside `:core:*`, a screen can be added or deleted as a single module, and the compiler enforces the boundaries instead of code review.
+
+### 2.2 Module Map
 
 ```
 :app
-├── :core                 # Infrastructure Modules
-│   ├── :common
-│   ├── :database-api
-│   └── :database-impl
-├── :data                 # Data Layer
-├── :domain               # Domain Layer
-├── :feature              # UI (Presentation) Layer Modules
+├── :feature                 # Business features (vertical slices)
 │   └── :main
-└── :shared               # UI (Presentation) Layer Modules
-    ├── :designsystem
-    └── :ui
+├── :shared                  # Reusable presentation code
+│   ├── :designsystem
+│   └── :ui
+└── :core                    # Infrastructure capabilities
+    ├── :common
+    ├── :network
+    ├── :database-api
+    └── :database-impl
 ```
 
-#### `:feature` & `:shared` (UI / Presentation Layer)
+> **Scaffold status**: `:app`, `:feature:main`, `:shared:*` and the DI qualifiers in `:core:common` contain code today. `:core:network`, `:core:database-api` and `:core:database-impl` are fully wired into the build but still empty — they are the slots for your network and persistence layers.
 
-* **Responsibility**: The presentation layer of the application, responsible for displaying the user interface and handling user interactions.
-* **Contents**:
-    * `:feature:*`: Concrete business feature modules, containing `Fragments`, `ViewModels` (MVI), and feature-specific navigation graphs.
-    * `:shared:designsystem`: Defines the basic visual specifications of the app (colors, themes, fonts).
-    * `:shared:ui`: Contains reusable composite UI components and `Base` classes.
-* **Development Rules**: **This layer depends only on the `:domain` module for data and business logic.** It should have no knowledge of data sources or implementation details.
+#### `:app` — Composition Root
 
-#### `:domain` Module (Domain Layer)
+- **Responsibility**: Assembles the application. It is the only module that knows about every feature.
+- **Contents**: `Application` class (`@HiltAndroidApp`), `MainActivity`, the app-level navigation graph, resources and the launcher icon.
+- **Development Rules**: Keep it thin. It wires features together and owns the navigation graph; business logic belongs in a feature module. Applies `template.android.application`, which also brings Hilt and ViewBinding.
 
-* **Responsibility**: Defines the core business rules and data contracts of the application. This is the center of the architecture.
-* **Contents**: `Repository` **interfaces**, pure Kotlin business data models, and optional `UseCases`.
-* **Development Rules**: **This is a pure Kotlin module** and must not contain any Android framework dependencies, ensuring platform independence and high testability of the business logic.
+#### `:feature:*` — Business Features
 
-#### `:data` Module (Data Layer)
+- **Responsibility**: A self-contained slice of the product, owning its UI, its state handling and its data access.
+- **Contents**: `Fragments`, MVI `ViewModels`, state / side-effect types, feature-local repositories and mappers, and the feature's layouts.
+- **Development Rules**: Applies `template.android.feature`, which configures Hilt, ViewBinding and dependencies on `:core:common` and `:shared:ui`. Add `:core:network` / `:core:database-impl` explicitly when the feature needs them. **A feature must never depend on another feature** — share through `:core:*` contracts or promote the code to `:shared:*` instead.
 
-* **Responsibility**: **Implements** the interfaces defined in the `:domain` layer. It is responsible for deciding where data comes from (network, database, cache) and for mapping and processing that data.
-* **Contents**: `Repository` **implementations**, `DataSources` (local/remote), and `Mappers` for converting between different data models.
-* **Development Rules**: Depends on the `:domain` layer to implement its interfaces and on the `:core` layer to access data manipulation infrastructure.
+#### `:shared:designsystem` — Visual Language
 
-#### `:core` Module Group (Infrastructure Layer)
+- **Responsibility**: Defines the basic visual specifications of the app.
+- **Contents**: Colors, themes (including `values-night`), dimens (with `values-w600dp` / `values-w1240dp` variants), and the base AndroidX / Material dependencies.
+- **Development Rules**: Resources and dependency declarations only. It deliberately does **not** apply Hilt or ViewBinding, so it stays free of a DI framework and a KSP processor.
 
-* **Responsibility**: Provides concrete technical implementations and common utilities for the `:data` layer.
-* **Contents**:
-    * `:core:common`: Common utilities, `DataStore` management, etc.
-    * `:core:database-api` & `:core:database-impl`: The complete implementation of the Room database.
-    * (Future extension) `:core:network`: The implementation for Retrofit.
-* **Development Rules**: This is the lowest-level implementation detail, encapsulated by the `:data` layer.
+#### `:shared:ui` — UI Toolkit
+
+- **Responsibility**: Reusable UI building blocks shared by every feature.
+- **Contents**:
+    - `BaseActivity` / `BaseFragment`: ViewBinding lifecycle handling.
+    - MVI runtime: `MVIContainer`, `IntentContext`, `BaseMVIViewModel`, `BaseAndroidMVIViewModel`, and the `MVIContainer.observe(...)` extension that collects state and side effects on `repeatOnLifecycle`.
+- **Development Rules**: Depends only on `:shared:designsystem` (plus navigation / lifecycle / ConstraintLayout, exposed via `api`). Applies `template.viewbinding` but not Hilt — this module defines contracts, it does not inject anything.
+
+#### `:core:common` — Foundation
+
+- **Responsibility**: The baseline every module can rely on.
+- **Contents**: Coroutines and kotlinx.serialization (exposed via `api`), DataStore Preferences, DI qualifiers such as `@IODispatcher`, and the `CoroutineModule` that provides them.
+
+#### `:core:network` — Network Infrastructure
+
+- **Responsibility**: Everything needed to talk to a backend.
+- **Contents**: Retrofit, the kotlinx.serialization converter, OkHttp and the logging interceptor. API service definitions belong here.
+- **Development Rules**: Depends on `:core:common`. Applies `template.hilt` so services can be injected.
+
+#### `:core:database-api` & `:core:database-impl` — Persistence
+
+- **Responsibility**: `:core:database-api` is where persistence contracts (entities, DAOs, the database interface) are declared, and it exposes Room / Paging as `api`. `:core:database-impl` holds the actual `RoomDatabase` implementation and its DI module.
+- **Development Rules**: `:core:database-impl` applies `template.room` (KSP + `room-compiler`), writes schemas to `schemas/`, and enables `room.generateKotlin`. Consumers depend on `:core:database-api`; `:core:database-impl` must be on the runtime classpath (usually through `:app`) for Hilt to see its module.
+
+### 2.3 Dependency Rules
+
+| From                   | May depend on                                                    | Must not depend on                    |
+| ---------------------- | ---------------------------------------------------------------- | ------------------------------------- |
+| `:app`                 | `:feature:*`, `:shared:*`, `:core:*`                             | — (composition root)                  |
+| `:feature:*`           | `:shared:*`, `:core:*`                                           | other `:feature:*`                    |
+| `:shared:ui`           | `:shared:designsystem`                                           | `:feature:*`, `:core:*`               |
+| `:shared:designsystem` | —                                                                | `:feature:*`, `:core:*`, `:shared:ui` |
+| `:core:*`              | `:core:common` (`:core:database-impl` also `:core:database-api`) | `:feature:*`, `:shared:*`             |
+
+Navigation follows the same rule: a feature does not navigate to another feature directly. All destinations are declared in `:app`'s navigation graph, which references feature Fragments by fully-qualified name.
+
+### 2.4 Build Logic (`build-logic`)
+
+All module configuration lives in `build-logic/convention` as convention plugins, so a module's build file usually contains only its namespace and its own dependencies.
+
+| Plugin ID                      | Composed of                                                           | Purpose                                                                    |
+| ------------------------------ | --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `template.android.application` | `com.android.application` + `template.hilt` + `template.viewbinding`  | Application setup: identity, SDK levels, Java 21, shared test dependencies |
+| `template.android.library`     | `com.android.library`                                                 | Minimal library setup: SDK levels, Java 21, shared test dependencies       |
+| `template.android.feature`     | `template.android.library` + `template.hilt` + `template.viewbinding` | Feature setup, plus `:core:common` and `:shared:ui` dependencies           |
+| `template.hilt`                | `com.google.devtools.ksp` + `com.google.dagger.hilt.android`          | `hilt-android` plus its KSP compiler                                       |
+| `template.room`                | `com.google.devtools.ksp` + `androidx.room`                           | `room-runtime` / `room-ktx` plus the KSP compiler                          |
+| `template.viewbinding`         | —                                                                     | Enables `viewBinding` on application and library modules                   |
+| `template.serialization`       | `org.jetbrains.kotlin.plugin.serialization`                           | Kotlin serialization compiler plugin, opt-in per module                    |
+
+**Capabilities are opt-in on purpose.** `template.android.library` stays minimal; modules add `template.hilt`, `template.viewbinding` or `template.room` only if they need them. Only `template.android.feature` bundles Hilt and ViewBinding, because feature modules are numerous and uniform in shape.
+
+**`AppConfig` is the single source of truth** for application id, version, SDK levels and the Java version:
+
+```kotlin
+object AppConfig {
+
+    // --- Application identity and version ---
+
+    const val APPLICATION_ID = "com.example.template"
+
+    const val VERSION_CODE = 1
+    const val VERSION_NAME = "1.0"
+
+    // --- SDK levels ---
+
+    const val COMPILE_SDK = 37
+    const val MIN_SDK = 28
+    const val TARGET_SDK = 37
+
+    // --- Compiler options ---
+
+    /** Java / Kotlin target. AGP 9 has built-in Kotlin, so jvmTarget follows compileOptions. */
+    val JAVA_VERSION: JavaVersion = JavaVersion.VERSION_21
+}
+```
+
+Modules no longer declare `compileSdk`, `minSdk` or `versionCode` themselves — change a value here and every module follows.
+
+Two further AGP 9 notes:
+
+- Release builds currently set `optimization { enable = false }`, so R8 optimization is off until you opt in.
+- Keep rules live in `src/main/keepRules/*.keep` (see `app/src/main/keepRules/rules.keep`); AGP merges every file in that directory into the single rule set handed to R8.
 
 ## 3. Development Guide
 
-Following this architecture to add new features, while involving more explicit steps, ensures long-term code health. The following is an example of **adding a 'User Settings' feature**.
+Following this architecture to add a new feature involves more explicit steps than dropping a class into `:app`, but it is what keeps the module graph honest. The example below adds a **"User Settings" feature**.
 
-### Step 1: Define the Domain Layer
+### Step 1: Create the Feature Module
 
-In the `:domain` module, define the data contracts required for the new feature.
+1. Create the module directory `feature/settings/` with a `build.gradle.kts`:
 
-1. Create the business model: `data class UserSetting(...)`
-2. Create the repository interface: `interface UserSettingRepository { fun getSettings(): Flow<UserSetting> }`
+```kotlin
+plugins {
+    id("template.android.feature")
+}
 
-### Step 2: Implement the Data Layer
+android {
+    namespace = "com.example.template.feature.settings"
+}
 
-In the `:data` and `:core` modules, provide the concrete implementation for the contracts from Step
+dependencies {
+    // Only the infrastructure this feature actually uses.
+    implementation(project(":core:network"))
+}
+```
 
-1. **Infrastructure**: If a new database table is needed, define the `SettingEntity` and `SettingDao` in `:core:database-api`, and register the `Entity` in `:core:database-impl`.
-2. **Data Implementation**: In the `:data` module, create `UserSettingRepositoryImpl` that implements the `UserSettingRepository` interface from `:domain`. Inject the `SettingDao` or `ApiService` here and handle data mapping (e.g., Entity -> Domain Model).
-3. **Dependency Injection**: In the `:data` module, use Hilt's `@Binds` annotation to bind the `UserSettingRepositoryImpl` to the `UserSettingRepository` interface.
+2. Register it in `settings.gradle.kts`:
 
-### Step 3: Implement the Presentation Layer (UI)
+```kotlin
+include(":feature:settings")
+```
 
-1. **Create Module**: Create a new Android Library module named `:feature:settings`.
-2. **Configure Dependencies**:
-    * In `:feature:settings/build.gradle.kts`, add dependencies on the `:domain` and `:shared:ui` modules.
-    * In `:app/build.gradle.kts`, add a dependency on the new `:feature:settings` module.
-3. **Create UI**: In `:feature:settings`, create `SettingsFragment` and `SettingsViewModel`. The ViewModel will **inject the `UserSettingRepository` interface from `:domain`** via Hilt and manage the UI state according to the MVI pattern.
-4. **Integrate Navigation**: In the `:app` module's main navigation graph, add an action to navigate to the `:feature:settings` module's navigation graph.
+Hilt, ViewBinding, `:core:common` and `:shared:ui` already come from the convention plugin — do not declare them again. If the feature needs persistence, add `:core:database-api` here and make sure `:core:database-impl` is on the runtime classpath (usually via `:app`).
 
-## 4. License
+### Step 2: Define State and Side Effects
+
+Inside the new module, model the screen as an immutable state plus a one-shot side-effect type:
+
+```kotlin
+data class SettingsState(
+    val enabled: Boolean = false,
+)
+
+sealed interface SettingsSideEffect {
+    data class ShowMessage(val text: String) : SettingsSideEffect
+}
+```
+
+### Step 3: Implement the ViewModel
+
+```kotlin
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val repository: SettingsRepository,
+) : BaseMVIViewModel<SettingsState, SettingsSideEffect>() {
+
+    override val initialState = SettingsState()
+
+    fun onToggle() = intent {
+        reduce { copy(enabled = !enabled) }
+        postSideEffect(SettingsSideEffect.ShowMessage("Settings updated"))
+    }
+}
+```
+
+`intent { ... }` runs in `viewModelScope`; inside it `state` reads the current state, `reduce` produces the next one, and `postSideEffect` emits a one-shot event. Use `BaseAndroidMVIViewModel` instead when the ViewModel needs a `Context`.
+
+### Step 4: Implement the UI
+
+```kotlin
+@AndroidEntryPoint
+class SettingsFragment : BaseFragment<FragmentSettingsBinding>(FragmentSettingsBinding::inflate) {
+
+    private val viewModel: SettingsViewModel by viewModels()
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        viewModel.observe(
+            lifecycleOwner = viewLifecycleOwner,
+            state = { binding.switchEnabled.isChecked = it.enabled },
+            sideEffect = { effect -> /* show a snackbar, navigate, ... */ },
+        )
+
+        binding.switchEnabled.setOnCheckedChangeListener { _, _ -> viewModel.onToggle() }
+    }
+}
+```
+
+`observe` collects both streams on `repeatOnLifecycle(STARTED)`, so nothing leaks when the view goes to the background.
+
+### Step 5: Provide Dependencies
+
+Declare the repository contract in the feature and bind the implementation with a feature-local Hilt module:
+
+```kotlin
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class SettingsModule {
+
+    @Binds
+    abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
+}
+```
+
+### Step 6: Wire It Into the App
+
+1. Add the module dependency in `app/build.gradle.kts`: `implementation(project(":feature:settings"))`.
+2. Add the destination to `app/src/main/res/navigation/nav_graph.xml`, referencing `com.example.template.feature.settings.SettingsFragment` by fully-qualified name.
+
+### Step 7: Test
+
+The convention plugins already put JUnit 4 and `kotlinx-coroutines-test` on every module's test classpath, so no extra dependency configuration is needed. Because intents run in `viewModelScope`, a ViewModel test does need the Main dispatcher replaced:
+
+```kotlin
+class MainDispatcherRule(
+    private val dispatcher: TestDispatcher = StandardTestDispatcher(),
+) : TestWatcher() {
+
+    override fun starting(description: Description) = Dispatchers.setMain(dispatcher)
+
+    override fun finished(description: Description) = Dispatchers.resetMain()
+}
+
+class SettingsViewModelTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun `toggle flips the flag`() = runTest {
+        val viewModel = SettingsViewModel(FakeSettingsRepository())
+
+        viewModel.onToggle()
+        advanceUntilIdle()
+
+        assertEquals(true, viewModel.uiState.value.enabled)
+    }
+}
+```
+
+## 4. Build & Test
+
+```bash
+./gradlew assembleDebug          # build the debug APK
+./gradlew test                   # unit tests across all modules
+./gradlew connectedAndroidTest   # instrumented tests on a device/emulator
+./gradlew :feature:main:test     # scope a task to one module
+```
+
+The build requires **JDK 21**. Configuration cache is enabled with `problems=fail`, so a task that is not configuration-cache compatible will fail the build rather than silently degrade it.
+
+## 5. License
 
 This project is licensed under the Apache License, Version 2.0. See the `LICENSE` file for details.
 
