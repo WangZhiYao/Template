@@ -1,48 +1,7 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.hilt.android)
+    id("template.android.feature")
 }
 
 android {
     namespace = "com.example.template.feature.main"
-    compileSdk {
-        version = release(37)
-    }
-
-    defaultConfig {
-        minSdk = 28
-
-        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    buildFeatures {
-        viewBinding = true
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget = JvmTarget.JVM_21
-    }
-}
-
-dependencies {
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.android.compiler)
-
-    implementation(project(":core:common"))
-    implementation(project(":shared:ui"))
-
 }
