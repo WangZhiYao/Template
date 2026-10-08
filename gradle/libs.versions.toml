@@ -18,7 +18,7 @@ androidx-core = "1.19.1"
 lifecycle = "2.11.0"
 navigation = "2.10.2"
 room = "2.8.5"
-paging = "3.5.1"
+paging = "3.5.2"
 datastore = "1.2.1"
 
 # Compose
