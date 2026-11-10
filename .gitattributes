@@ -1,0 +1,4 @@
+# Keep Unix shell scripts LF everywhere, otherwise a Windows checkout (core.autocrlf=true)
+# turns them into CRLF and they fail with "$'\r': command not found" in bash / Git Bash.
+*.sh    text eol=lf
+gradlew text eol=lf
