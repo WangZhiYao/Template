@@ -14,7 +14,7 @@ boilerplate.
   comes from **AGP 9's built-in Kotlin support**, so modules apply only the Android plugin and no
   `org.jetbrains.kotlin.android` plugin; `jvmTarget` follows `compileOptions` (Java 21). Pure JVM
   modules (`:domain:*`) use the standalone `org.jetbrains.kotlin.jvm` plugin instead.
-* **Build System**: Gradle 9.8.0 + AGP 9.4.1, using Version Catalogs (`gradle/libs.versions.toml`)
+* **Build System**: Gradle 9.9.0 + AGP 9.5.1, using Version Catalogs (`gradle/libs.versions.toml`)
   for dependency versions and `build-logic` convention plugins for shared configuration.
 * **Toolchain**: JDK 21, `compileSdk` / `targetSdk` 37, `minSdk` 28 — all declared once in
   `AppConfig`.
@@ -253,6 +253,12 @@ These are not visible in the build file, and getting them wrong produces confusi
   recognises the `javax` namespace; the `jakarta` annotation is silently ignored and surfaces as
   "cannot be provided without an @Inject constructor".
 * **Domain models are not Room entities.** `:data:*` owns the mapping in both directions.
+* **Overriding `initialState` must use the getter form
+  (`override val initialState: X get() = X()`), never a field with an initializer.**
+  Base-class property initializers run before the subclass assigns its fields, so the field
+  form captures the not-yet-initialised `null` into the `MutableStateFlow` (generic erasure
+  hides it from the type system) and the first composition crashes with a
+  `NullPointerException`.
 * **`:core:database` owns every `@Entity` and `@Dao`; `:data:*` declares none.** A DAO placed in a
   `:data:*` module would either be invisible to the `@Database` class or force a circular
   dependency, and KSP generates no implementation for a `@Dao` compiled outside `template.room`.
@@ -513,7 +519,8 @@ class SettingsViewModel @Inject constructor(
     private val setEnabled: SetEnabledUseCase,
 ) : BaseMVIViewModel<SettingsState, SettingsSideEffect>() {
 
-    override val initialState = SettingsState()
+    // The getter form is mandatory, see 2.4 Implicit contracts
+    override val initialState: SettingsState get() = SettingsState()
 
     init {
         intent {

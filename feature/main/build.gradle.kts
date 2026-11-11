@@ -8,6 +8,9 @@ android {
 }
 
 dependencies {
+    // Contracts only — never :data:main (see README 2.3).
+    implementation(project(":domain:main"))
+
     implementation(libs.androidx.compose.material3.adaptive.navigation.suite)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)

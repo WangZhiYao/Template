@@ -12,7 +12,7 @@
   **AGP 9 内置的 Kotlin 支持**提供，因此模块只应用 Android 插件，不应用
   `org.jetbrains.kotlin.android` 插件；`jvmTarget` 跟随 `compileOptions`（Java 21）。纯 JVM
   模块（`:domain:*`）改用独立的 `org.jetbrains.kotlin.jvm` 插件。
-* **构建系统**：Gradle 9.8.0 + AGP 9.4.1，使用 Version Catalog（`gradle/libs.versions.toml`）
+* **构建系统**：Gradle 9.9.0 + AGP 9.5.1，使用 Version Catalog（`gradle/libs.versions.toml`）
   管理依赖版本，使用 `build-logic` 约定插件统一配置。
 * **工具链**：JDK 21，`compileSdk` / `targetSdk` 37，`minSdk` 28 —— 全部在 `AppConfig` 中
   声明一次。
@@ -231,6 +231,10 @@
   Dagger 只识别 `javax` 命名空间；`jakarta` 注解会被静默忽略，最终表现为
   "cannot be provided without an @Inject constructor"。
 * **Domain 模型不是 Room 实体。** 双向映射由 `:data:*` 负责。
+* **覆盖 `initialState` 必须用 getter 形式（`override val initialState: X get() = X()`），
+  绝不能用带初始化器的字段形式。** 基类的属性初始化器先于子类字段赋值执行，字段形式会把
+  尚未初始化的 `null` 装进 `MutableStateFlow`（泛型擦除让它逃过类型检查），应用启动首次
+  组合时即以 `NullPointerException` 崩溃。
 * **所有 `@Entity` 和 `@Dao` 都由 `:core:database` 持有，`:data:*` 一个都不声明。** 放在
   `:data:*` 的 DAO 要么对 `@Database` 类不可见，要么造成循环依赖；而且在没有 `template.room`
   的模块里编译的 `@Dao` 不会生成实现。
@@ -485,7 +489,8 @@ class SettingsViewModel @Inject constructor(
     private val setEnabled: SetEnabledUseCase,
 ) : BaseMVIViewModel<SettingsState, SettingsSideEffect>() {
 
-    override val initialState = SettingsState()
+    // getter 形式是必须的，见 2.4 隐式契约
+    override val initialState: SettingsState get() = SettingsState()
 
     init {
         intent {

@@ -27,8 +27,11 @@ include(":app")
 
 include(":core:common")
 include(":core:network")
-include(":core:database-api")
-include(":core:database-impl")
+include(":core:database")
+
+include(":data:main")
+
+include(":domain:main")
 
 include(":feature:main")
 
